@@ -1,1 +1,1 @@
-from gym_hopper.envs.hopperEnv import HopperEnv
+from gym_hopper.envs.hopperEnv import GymHopper
