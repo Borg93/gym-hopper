@@ -12,52 +12,63 @@ def setupServer(ip, port):
         sock.bind(server_address)
         sock.listen(1)
     except:
-        print("Unknown error: " + str(sys.exc_info()[0]))
+        print("[ env ] Unknown error: " + str(sys.exc_info()[0]))
     return sock, server_address
+
+
+def _print(msg):
+    print("[ env ] " + msg)
 
 
 class GymHopper(gym.Env):
 
-    def __init__(self):
-        print("Initialization done.")
-
     def sendMessage(self, msg):
-        self.connectionSend.sendall(str(msg + '&').encode())
+        try:
+            self.connectionSend.sendall(str(msg + '&').encode())
+        except:
+            _print("Unknown error: " + str(sys.exc_info()[0]))
+
+    def interpret_result(self, result):
+        return np.array([0.0, 0.0, 0.0]), 0.0, False, {}
+
+    def __init__(self):
+        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(7,))
+        _print("Initialization done.")
 
     def _step(self, action):
-        self.sendMessage("instruction: control path, nozzle state, etc etc pp pp pp pp, and lots of other stuff you spas")
-        print("Waiting for an answer...")
-        answer = self.connectionRecv.recv(128)
-        print(answer.decode())
-        observation = 0.0
-        reward = 0.0
-        done = False
-        info = {}
-        return observation, reward, done, info
+        _print("Sending action to GH and waiting for answer.")
+        self.sendMessage(str(action))
+        while True:
+            data = self.connectionRecv.recv(256)
+            result = data.decode()
+            if not result == "":
+                _print("Result: " + result)
+                observation, reward, done, info = self.interpret_result(result)
+                return observation, reward, done, info
+                break
 
     def _reset(self):
-        ipRI = raw_input("Please enter IP (hit enter for localhost): ")
+        ipRI = raw_input("[ env ] Please enter IP (hit enter for localhost): ")
         if ipRI == "":
             ipRI = '127.0.0.1'
-        psRI = raw_input("Please enter send port: ")
-        prRI = raw_input("Please enter receive port: ")
-        print("Setting up communication servers.")
+        psRI = raw_input("[ env ] Please enter send port: ")
+        prRI = raw_input("[ env ] Please enter receive port: ")
+        _print("Setting up communication servers.")
         self.sockSend, self.send_Address = setupServer(ipRI, int(psRI))
         self.sockRecv, self.recv_Address = setupServer(ipRI, int(prRI))
-        print("Waiting for send connection...")
+        _print("Waiting for client on send server...")
         self.connectionSend, self.clientAddressSend = self.sockSend.accept()
-        print("...done.")
-        print("Waiting for receive connection...")
+        _print("...Connected")
+        _print("Waiting for client on receive server...")
         self.connectionRecv, self.clientAddressRecv = self.sockRecv.accept()
-        print("...done.")
-        print("Reset done.")
+        _print("...Connected")
+        _print("Reset done.")
 
     def _render(self, mode='human', close=False):
-        print("Render done.")
+        _print("Render done.")
 
     def closeConnection(self):
         self.connectionSend.close()
         self.connectionRecv.close()
         self.sockRecv.close()
         self.sockRecv.close()
-
