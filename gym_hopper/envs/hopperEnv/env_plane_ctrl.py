@@ -26,24 +26,35 @@ class GymHopperPC(gym.Env):
         try:
             self.connectionSend.sendall(str(msg + '&').encode())
         except:
-            _print("Unknown error: " + str(sys.exc_info()[0]))
+            _print("Unknown error during send: " + str(sys.exc_info()[0]))
 
-    def interpret_result(self, result):
+    def interpret_answer(self, result):
+        #self.axis_state = 
         return np.array([0.0, 0.0, 0.0]), 0.0, False, {}
 
     def __init__(self):
-        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(7,))
+        self.action_space = spaces.Box(low=0.0, high=1.0, shape=(4,))
+        self.axis_state = spaces.Box(low=0.0, high=1.0, shape=(6,))
+        #quantec kr210 3100 ultra
+        self.axis_limits = np.array([
+            [-185.0, 185.0]
+            [-130.0, 0.0]
+            [-40.0, 148.0]
+            [-350.0, 350.0]
+            [-120.0, 120.0]
+            [-350.0, 350.0]])
+        self.tcp
         _print("Initialization done.")
 
     def _step(self, action):
-        _print("Sending action to GH and waiting for answer.")
+        _print(">>> sending: ")
         self.sendMessage(str(action))
         while True:
             data = self.connectionRecv.recv(256)
-            result = data.decode()
-            if not result == "":
-                _print("Result: " + result)
-                observation, reward, done, info = self.interpret_result(result)
+            answer = data.decode()
+            if not answer == "":
+                _print("<<< answer: " + answer)
+                observation, reward, done, info = self.interpret_answer(answer)
                 return observation, reward, done, info
                 break
 
